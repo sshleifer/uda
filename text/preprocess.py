@@ -83,23 +83,23 @@ def get_data_stats(data_stats_dir, sub_set, sup_size, replicas, examples):
     all_exist = True
     for key in keys:
         data_stats_path = "{}/{}.json".format(data_stats_dir, key)
-        if not tf.gfile.Exists(data_stats_path):
+        if not tf.io.gfile.Exists(data_stats_path):
             all_exist = False
             tf.logging.info("Not exist: {}".format(data_stats_path))
     if all_exist:
         tf.logging.info("loading data stats from {:s}".format(data_stats_dir))
         data_stats = {}
         for key in keys:
-            with tf.gfile.Open(
+            with tf.io.gfile.Open(
                     "{}/{}.json".format(data_stats_dir, key)) as inf:
                 data_stats[key] = json.load(inf)
     else:
         assert sup_size == -1, "should use the complete set to get tf_idf"
         assert replicas == 1, "should use the complete set to get tf_idf"
         data_stats = word_level_augment.get_data_stats(examples)
-        tf.gfile.MakeDirs(data_stats_dir)
+        tf.io.gfile.MakeDirs(data_stats_dir)
         for key in keys:
-            with tf.gfile.Open("{}/{}.json".format(data_stats_dir, key), "w") as ouf:
+            with tf.io.gfile.Open("{}/{}.json".format(data_stats_dir, key), "w") as ouf:
                 json.dump(data_stats[key], ouf)
         tf.logging.info("dumped data stats to {:s}".format(data_stats_dir))
     return data_stats
@@ -294,8 +294,8 @@ def obtain_tfrecord_writer(data_path, worker_id, shard_cnt):
 
 def dump_tfrecord(features, data_path, worker_id=None, max_shard_size=4096):
     """Dump tf record."""
-    if not tf.gfile.Exists(data_path):
-        tf.gfile.MakeDirs(data_path)
+    if not tf.io.gfile.Exists(data_path):
+        tf.io.gfile.MakeDirs(data_path)
     tf.logging.info("dumping TFRecords")
     np.random.shuffle(features)
     shard_cnt = 0

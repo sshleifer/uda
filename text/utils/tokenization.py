@@ -27,7 +27,7 @@ import tensorflow as tf
 
 def open_reader(input_file, encoding="utf-8"):
   """Opens a text file for reading."""
-  return codecs.getreader(encoding)(tf.gfile.GFile(input_file, "r"))
+  return codecs.getreader(encoding)(tf.io.gfile.GFile(input_file, "r"))
 
 
 def load_vocab(vocab_file):

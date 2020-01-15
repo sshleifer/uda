@@ -84,7 +84,7 @@ def get_raw_data_filenames(split):
 
 
 def read_pickle_from_file(filename):
-  with tf.gfile.Open(filename, "rb") as f:
+  with tf.io.gfile.Open(filename, "rb") as f:
     if sys.version_info >= (3, 0):
       data_dict = pickle.load(f, encoding="bytes")
     else:
@@ -115,10 +115,10 @@ def save_tfrecord(example_list, out_path, max_shard_size=4096):
 
 
 def save_merged_data(images, labels, split, merge_folder):
-  with tf.gfile.Open(
+  with tf.io.gfile.Open(
       os.path.join(merge_folder, "{}_images.npy".format(split)), "wb") as ouf:
     np.save(ouf, images)
-  with tf.gfile.Open(
+  with tf.io.gfile.Open(
       os.path.join(merge_folder, "{}_labels.npy".format(split)), "wb") as ouf:
     np.save(ouf, labels)
 
@@ -129,15 +129,15 @@ def download_and_extract():
   merge_folder = os.path.join(FLAGS.raw_data_dir, MERGE_DATA_FOLDER)
   for split in ["train", "test"]:
     for field in ["images", "labels"]:
-      if not tf.gfile.Exists(os.path.join(merge_folder, "{}_{}.npy".format(
+      if not tf.io.gfile.Exists(os.path.join(merge_folder, "{}_{}.npy".format(
           split, field))):
         all_exist = False
   if all_exist:
     tf.logging.info("found all merged files")
     return
   tf.logging.info("downloading dataset")
-  tf.gfile.MakeDirs(download_folder)
-  tf.gfile.MakeDirs(merge_folder)
+  tf.io.gfile.MakeDirs(download_folder)
+  tf.io.gfile.MakeDirs(merge_folder)
   if FLAGS.task_name == "cifar10":
     tf.contrib.learn.datasets.base.maybe_download(
         CIFAR_TARNAME, download_folder, CIFAR_DOWNLOAD_URL)
@@ -163,7 +163,7 @@ def download_and_extract():
           download_folder,
           SVHN_DOWNLOAD_URL.format(split))
       filename = os.path.join(download_folder, "{}_32x32.mat".format(split))
-      data_dict = scipy.io.loadmat(tf.gfile.Open(filename))
+      data_dict = scipy.io.loadmat(tf.io.gfile.Open(filename))
       images = np.transpose(data_dict["X"], [3, 0, 1, 2])
       labels = data_dict["y"].reshape(-1)
       labels[labels == 10] = 0
@@ -175,10 +175,10 @@ def load_dataset():
   download_and_extract()
   merge_folder = os.path.join(FLAGS.raw_data_dir, MERGE_DATA_FOLDER)
   for split in ["train", "test"]:
-    with tf.gfile.Open(
+    with tf.io.gfile.Open(
         os.path.join(merge_folder, "{}_images.npy".format(split))) as inf:
       images = np.load(inf)
-    with tf.gfile.Open(
+    with tf.io.gfile.Open(
         os.path.join(merge_folder, "{}_labels.npy".format(split))) as inf:
       labels = np.load(inf)
     data[split] = {"images": images, "labels": labels}
@@ -314,8 +314,8 @@ def proc_and_dump_unsup_data(sub_set_data, aug_copy_num):
 def main(unused_argv):
 
   output_base_dir = FLAGS.output_base_dir
-  if not tf.gfile.Exists(output_base_dir):
-    tf.gfile.MakeDirs(output_base_dir)
+  if not tf.io.gfile.Exists(output_base_dir):
+    tf.io.gfile.MakeDirs(output_base_dir)
 
   data = load_dataset()
   if FLAGS.data_type == "sup":

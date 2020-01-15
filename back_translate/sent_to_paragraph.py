@@ -34,14 +34,14 @@ flags.DEFINE_string(
 
 
 def main(argv):
-  with tf.gfile.Open(FLAGS.input_file) as inf:
+  with tf.io.gfile.Open(FLAGS.input_file) as inf:
     sentences = inf.readlines()
-  with tf.gfile.Open(FLAGS.doc_len_file) as inf:
+  with tf.io.gfile.Open(FLAGS.doc_len_file) as inf:
     doc_len_list = json.load(inf)
   cnt = 0
   print("\n" * 2)
   print("*** printing paraphrases ***")
-  with tf.gfile.Open(FLAGS.output_file, "w") as ouf:
+  with tf.io.gfile.Open(FLAGS.output_file, "w") as ouf:
     for i, sent_num in enumerate(doc_len_list):
       para = ""
       for _ in range(sent_num):

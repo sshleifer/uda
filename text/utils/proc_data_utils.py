@@ -88,7 +88,7 @@ def get_aug_files(data_base_path, aug_ops, aug_copy):
   for sub_policy in sub_policy_list:
     sub_policy_data_files = []
     exist_copy_num = {}
-    for copy_dir in tf.gfile.ListDirectory(os.path.join(
+    for copy_dir in tf.io.gfile.ListDirectory(os.path.join(
         data_base_path, sub_policy)):
       copy_num = int(copy_dir.strip("/"))
       if copy_num >= aug_copy:

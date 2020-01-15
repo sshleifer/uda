@@ -573,16 +573,16 @@ def train(hparams):
         tf.logging.info("  %s = %s", key, str(results[key]))
         results[key] = results[key].item()
       acc = results["eval/classify_accuracy"]
-      with tf.gfile.Open("{}/results.txt".format(FLAGS.model_dir), "w") as ouf:
+      with tf.io.gfile.Open("{}/results.txt".format(FLAGS.model_dir), "w") as ouf:
         ouf.write(str(acc))
 
 
 def main(_):
 
   if FLAGS.do_train:
-    tf.gfile.MakeDirs(FLAGS.model_dir)
+    tf.io.gfile.MakeDirs(FLAGS.model_dir)
     flags_dict = tf.app.flags.FLAGS.flag_values_dict()
-    with tf.gfile.Open(os.path.join(FLAGS.model_dir, "FLAGS.json"), "w") as ouf:
+    with tf.io.gfile.Open(os.path.join(FLAGS.model_dir, "FLAGS.json"), "w") as ouf:
       json.dump(flags_dict, ouf)
   hparams = tf.contrib.training.HParams()
 

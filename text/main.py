@@ -184,10 +184,10 @@ def main(_):
       FLAGS.model_dropout)
 
 
-  tf.gfile.MakeDirs(FLAGS.model_dir)
+  tf.io.gfile.MakeDirs(FLAGS.model_dir)
 
   flags_dict = tf.app.flags.FLAGS.flag_values_dict()
-  with tf.gfile.Open(os.path.join(FLAGS.model_dir, "FLAGS.json"), "w") as ouf:
+  with tf.io.gfile.Open(os.path.join(FLAGS.model_dir, "FLAGS.json"), "w") as ouf:
     json.dump(flags_dict, ouf)
 
   tf.logging.info("warmup steps {}/{}".format(
@@ -309,7 +309,7 @@ def main(_):
 
     best_acc = 0
     for ckpt_path in checkpoint_state.all_model_checkpoint_paths:
-      if not tf.gfile.Exists(ckpt_path + ".data-00000-of-00001"):
+      if not tf.io.gfile.Exists(ckpt_path + ".data-00000-of-00001"):
         tf.logging.info(
             "Warning: checkpoint {:s} does not exist".format(ckpt_path))
         continue

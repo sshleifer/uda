@@ -89,7 +89,7 @@ def main(_):
 
 
   tf.logging.info("loading input data")
-  with tf.gfile.Open(FLAGS.input_file) as inf:
+  with tf.io.gfile.Open(FLAGS.input_file) as inf:
     contents = inf.readlines()
   tf.logging.info("finished loading input data")
   assert len(contents) >= FLAGS.replicas
@@ -136,10 +136,10 @@ def main(_):
 
   tf.logging.info("finished spliting paragraphs")
 
-  with tf.gfile.Open(FLAGS.output_file, "w") as ouf:
+  with tf.io.gfile.Open(FLAGS.output_file, "w") as ouf:
     for st in new_contents:
       ouf.write(st + "\n")
-  with tf.gfile.Open(FLAGS.doc_len_file, "w") as ouf:
+  with tf.io.gfile.Open(FLAGS.doc_len_file, "w") as ouf:
     json.dump(doc_len, ouf)
 
 

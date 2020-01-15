@@ -56,8 +56,8 @@ def dump_raw_examples(examples, separate_doc_by_newline):
   tf.logging.info("dumpping raw examples")
   text_path = os.path.join(FLAGS.output_data_dir, "text.txt")
   label_path = os.path.join(FLAGS.output_data_dir, "label.txt")
-  with tf.gfile.Open(text_path, "w") as text_ouf:
-    with tf.gfile.Open(label_path, "w") as label_ouf:
+  with tf.io.gfile.Open(text_path, "w") as text_ouf:
+    with tf.io.gfile.Open(label_path, "w") as label_ouf:
       for example in examples:
         text_a = example.text_a
         text_b = example.text_b
@@ -76,8 +76,8 @@ def main(argv):
   tf.logging.info("loading examples")
   FLAGS.output_data_dir = os.path.join(
       FLAGS.output_data_dir, FLAGS.sub_set)
-  if not tf.gfile.Exists(FLAGS.output_data_dir):
-    tf.gfile.MakeDirs(FLAGS.output_data_dir)
+  if not tf.io.gfile.Exists(FLAGS.output_data_dir):
+    tf.io.gfile.MakeDirs(FLAGS.output_data_dir)
   if FLAGS.sub_set == "train":
     examples = processor.get_train_examples(FLAGS.raw_data_dir)
   elif FLAGS.sub_set.startswith("unsup"):

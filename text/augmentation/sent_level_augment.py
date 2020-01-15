@@ -82,7 +82,7 @@ def back_translation(examples, aug_ops, sub_set, aug_copy_num,
   tf.logging.info("Using back translation file: {:s}".format(
       back_translation_file))
 
-  with tf.gfile.Open(back_translation_file) as inf:
+  with tf.io.gfile.Open(back_translation_file) as inf:
     paraphrases = inf.readlines()
   for i in range(len(paraphrases)):
     paraphrases[i] = paraphrases[i].strip()
