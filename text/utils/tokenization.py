@@ -265,32 +265,16 @@ def _is_punctuation(char):
 
 def _convert_to_unicode_or_throw(text):
   """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
-  if isinstance(text, str):
-    text = text.decode("utf-8", "ignore")
-  if not isinstance(text, unicode):
-    raise ValueError("`text` must be of type `unicode` or `str`, but is "
-                     "actually of type: %s" % (type(text).__name__))
-  return text
+  if isinstance(text, bytes):
+    return text.decode("utf-8", "ignore")
+  else: return text
 
 
 def printable_text(text):
   """Returns text encoded in a way suitable for print or `tf.logging`."""
-
-  # These functions want `str` for both Python2 and Python3, but in one case
-  # it's a Unicode string and in the other it's a byte string.
-  if six.PY3:
-    if isinstance(text, str):
-      return text
-    elif isinstance(text, bytes):
-      return text.decode("utf-8", "ignore")
-    else:
-      raise ValueError("Unsupported string type: %s" % (type(text)))
-  elif six.PY2:
-    if isinstance(text, str):
-      return text
-    elif isinstance(text, unicode):
-      return text.encode("utf-8")
-    else:
-      raise ValueError("Unsupported string type: %s" % (type(text)))
+  if isinstance(text, str):
+    return text
+  elif isinstance(text, bytes):
+    return text.decode("utf-8", "ignore")
   else:
-    raise ValueError("Not running on Python2 or Python 3?")
+    raise ValueError("Unsupported string type: %s" % (type(text)))

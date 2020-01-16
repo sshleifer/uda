@@ -26,6 +26,7 @@ import os
 
 import numpy as np
 import tensorflow as tf
+from pathlib import Path
 
 # from augmentation import aug_policy
 from augmentation import sent_level_augment
@@ -36,6 +37,21 @@ from utils import tokenization
 from argparse import ArgumentParser
 
 PARSER = ArgumentParser()
+
+import logging
+
+# get TF logger
+log = logging.getLogger('tensorflow')
+log.setLevel(logging.DEBUG)
+
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# create file handler which logs even debug messages
+fh = logging.FileHandler('tensorflow.log')
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
+log.addHandler(fh)
 
 
 def create_arg(param_name, default, type, help='', required=False, **kwargs):
@@ -97,7 +113,7 @@ def get_data_stats(data_stats_dir, sub_set, sup_size, replicas, examples):
         assert sup_size == -1, "should use the complete set to get tf_idf"
         assert replicas == 1, "should use the complete set to get tf_idf"
         data_stats = word_level_augment.get_data_stats(examples)
-        tf.io.gfile.MakeDirs(data_stats_dir)
+        tf.io.gfile.makedirs(data_stats_dir)
         for key in keys:
             with tf.io.gfile.Open("{}/{}.json".format(data_stats_dir, key), "w") as ouf:
                 json.dump(data_stats[key], ouf)
@@ -218,10 +234,7 @@ def convert_examples_to_features(
             # st = " ".join([str(x) for x in tokens])
             st = ""
             for x in tokens:
-                if isinstance(x, unicode):
-                    st += x.encode("ascii", "replace") + " "
-                else:
-                    st += str(x) + " "
+                st += str(x) + " "
             tf.compat.v1.logging.info("tokens: %s" % st)
             tf.compat.v1.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
             tf.compat.v1.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
@@ -294,8 +307,8 @@ def obtain_tfrecord_writer(data_path, worker_id, shard_cnt):
 
 def dump_tfrecord(features, data_path, worker_id=None, max_shard_size=4096):
     """Dump tf record."""
-    if not tf.io.gfile.Exists(data_path):
-        tf.io.gfile.MakeDirs(data_path)
+    if not Path(data_path).exists():
+        tf.io.gfile.makedirs(data_path)
     tf.compat.v1.logging.info("dumping TFRecords")
     np.random.shuffle(features)
     shard_cnt = 0
@@ -479,7 +492,6 @@ def proc_and_save_unsup_data(
 
 
 def main(args):
-
     if args.max_seq_length > 512:
         raise ValueError(
             "Cannot use sequence length {:d} because the BERT model "
