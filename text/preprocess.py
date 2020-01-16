@@ -27,12 +27,15 @@ import os
 import numpy as np
 import tensorflow as tf
 from pathlib import Path
+from absl import flags, app
 
 # from augmentation import aug_policy
 from augmentation import sent_level_augment
 from augmentation import word_level_augment
 from utils import raw_data_utils
 from utils import tokenization
+from absl import app
+from absl import flags
 
 from argparse import ArgumentParser
 
@@ -52,6 +55,68 @@ fh = logging.FileHandler('tensorflow.log')
 fh.setLevel(logging.DEBUG)
 fh.setFormatter(formatter)
 log.addHandler(fh)
+
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string(
+    "task_name", "IMDB", "The name of the task to train.")
+
+flags.DEFINE_string(
+    "raw_data_dir", None, "Data directory of the raw data")
+
+flags.DEFINE_string(
+    "output_base_dir", None, "Data directory of the processed data")
+
+flags.DEFINE_string(
+    "aug_ops", "bt-0.9", "augmentation method")
+
+flags.DEFINE_integer(
+    "aug_copy_num", -1,
+    help="We generate multiple augmented examples for one"
+    "unlabeled example, aug_copy_num is the index of the generated augmented"
+    "example")
+
+flags.DEFINE_integer(
+    "max_seq_length", 512,
+    help="The maximum total sequence length after WordPiece tokenization. "
+    "Sequences longer than this will be truncated, and sequences shorter "
+    "than this will be padded.")
+
+flags.DEFINE_integer(
+    "sup_size", -1, "size of the labeled set")
+
+flags.DEFINE_bool(
+    "trunc_keep_right", True,
+    help="Whether to keep the right part when truncate a sentence.")
+
+flags.DEFINE_enum(
+    "data_type", default="sup",
+    enum_values=["sup", "unsup"],
+    help="Which preprocess task to perform.")
+
+flags.DEFINE_string(
+    "sub_set", "train",
+    "Which sub_set to preprocess. The sub_set can be train, dev and unsup_in")
+
+flags.DEFINE_string(
+    "vocab_file", "", "The path of the vocab file of BERT.")
+
+flags.DEFINE_bool(
+    "do_lower_case", True, "Whether to use uncased text for BERT.")
+
+flags.DEFINE_string(
+    "back_translation_dir", "", "Directory for back translated sentence.")
+
+flags.DEFINE_integer(
+    "replicas", 1,
+    "An argument for parallel preprocessing. For example, when replicas=3,"
+    "we divide the data into three parts, and only process one part"
+    "according to the worker_id.")
+
+flags.DEFINE_integer(
+    "worker_id", 0,
+    "An argument for parallel preprocessing. See 'replicas' for more details")
 
 
 def create_arg(param_name, default, type, help='', required=False, **kwargs):
@@ -491,45 +556,45 @@ def proc_and_save_unsup_data(
     dump_tfrecord(unsup_features, unsup_out_dir, worker_id)
 
 
-def main(args):
-    if args.max_seq_length > 512:
+def main(_):
+    if FLAGS.max_seq_length > 512:
         raise ValueError(
             "Cannot use sequence length {:d} because the BERT model "
             "was only trained up to sequence length {:d}".format(
-                args.max_seq_length, 512))
+                FLAGS.max_seq_length, 512))
 
-    processor = raw_data_utils.get_processor(args.task_name)
+    processor = raw_data_utils.get_processor(FLAGS.task_name)
     # Create tokenizer
     tokenizer = tokenization.FullTokenizer(
-        vocab_file=args.vocab_file, do_lower_case=args.do_lower_case)
+        vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
 
-    if args.data_type == "sup":
-        sup_out_dir = args.output_base_dir
+    if FLAGS.data_type == "sup":
+        sup_out_dir = FLAGS.output_base_dir
         tf.compat.v1.logging.info("Create sup. data: subset {} => {}".format(
-            args.sub_set, sup_out_dir))
+            FLAGS.sub_set, sup_out_dir))
 
         proc_and_save_sup_data(
-            processor, args.sub_set, args.raw_data_dir, sup_out_dir,
-            tokenizer, args.max_seq_length, args.trunc_keep_right,
-            args.worker_id, args.replicas, args.sup_size,
+            processor, FLAGS.sub_set, FLAGS.raw_data_dir, sup_out_dir,
+            tokenizer, FLAGS.max_seq_length, FLAGS.trunc_keep_right,
+            FLAGS.worker_id, FLAGS.replicas, FLAGS.sup_size,
         )
-    elif args.data_type == "unsup":
-        assert args.aug_ops is not None, \
+    elif FLAGS.data_type == "unsup":
+        assert FLAGS.aug_ops is not None, \
             "aug_ops is required to preprocess unsupervised data."
         unsup_out_dir = os.path.join(
-            args.output_base_dir,
-            args.aug_ops,
-            str(args.aug_copy_num))
-        data_stats_dir = os.path.join(args.raw_data_dir, "data_stats")
+            FLAGS.output_base_dir,
+            FLAGS.aug_ops,
+            str(FLAGS.aug_copy_num))
+        data_stats_dir = os.path.join(FLAGS.raw_data_dir, "data_stats")
 
         tf.compat.v1.logging.info("Create unsup. data: subset {} => {}".format(
-            args.sub_set, unsup_out_dir))
+            FLAGS.sub_set, unsup_out_dir))
         proc_and_save_unsup_data(
-            processor, args.sub_set,
-            args.raw_data_dir, data_stats_dir, unsup_out_dir,
-            tokenizer, args.max_seq_length, args.trunc_keep_right,
-            args.aug_ops, args.aug_copy_num,
-            args.worker_id, args.replicas)
+            processor, FLAGS.sub_set,
+            FLAGS.raw_data_dir, data_stats_dir, unsup_out_dir,
+            tokenizer, FLAGS.max_seq_length, FLAGS.trunc_keep_right,
+            FLAGS.aug_ops, FLAGS.aug_copy_num,
+            FLAGS.worker_id, FLAGS.replicas)
 
 
 if __name__ == "__main__":
@@ -561,5 +626,7 @@ if __name__ == "__main__":
                "data into three parts, and only process one part according to the worker_id.")
     create_arg("worker_id", 0, int,
                "An argument for parallel preprocessing. See 'replicas' for more details")
-    args = PARSER.parse_args()
-    main(args)
+    #args = PARSER.parse_args()
+    app.run(main)
+    #main(args)
+    #main(args)
