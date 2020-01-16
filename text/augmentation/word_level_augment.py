@@ -89,13 +89,13 @@ class UnifRep(EfficientRandomGen):
       else:
         show_example = False
       if show_example:
-        tf.logging.info("before augment: {:s}".format(
+        tf.compat.v1.logging.info("before augment: {:s}".format(
             filter_unicode(" ".join(tokens))))
       for i in range(len(tokens)):
         if self.get_random_prob() < self.token_prob:
           tokens[i] = self.get_random_token()
       if show_example:
-        tf.logging.info("after augment: {:s}".format(
+        tf.compat.v1.logging.info("after augment: {:s}".format(
             filter_unicode(" ".join(tokens))))
     return tokens
 
@@ -188,7 +188,7 @@ class TfIdfWordRep(EfficientRandomGen):
       all_words += example.word_list_b
 
     if show_example:
-      tf.logging.info("before tf_idf_unif aug: {:s}".format(
+      tf.compat.v1.logging.info("before tf_idf_unif aug: {:s}".format(
           filter_unicode(" ".join(all_words))))
 
     replace_prob = self.get_replace_prob(all_words)
@@ -206,7 +206,7 @@ class TfIdfWordRep(EfficientRandomGen):
       all_words = copy.deepcopy(example.word_list_a)
       if example.text_b:
         all_words += example.word_list_b
-      tf.logging.info("after tf_idf_unif aug: {:s}".format(
+      tf.compat.v1.logging.info("after tf_idf_unif aug: {:s}".format(
           filter_unicode(" ".join(all_words))))
     return example
 
@@ -225,7 +225,7 @@ class TfIdfWordRep(EfficientRandomGen):
     for idx in token_list_idx:
       self.token_list += [self.tf_idf_keys[idx]]
     self.token_ptr = len(self.token_list) - 1
-    tf.logging.info("sampled token list: {:s}".format(
+    tf.compat.v1.logging.info("sampled token list: {:s}".format(
         filter_unicode(" ".join(self.token_list))))
 
 
@@ -234,13 +234,13 @@ def word_level_augment(
   """Word level augmentations. Used before augmentation."""
   if aug_ops:
     if aug_ops.startswith("unif"):
-      tf.logging.info("\n>>Using augmentation {}".format(aug_ops))
+      tf.compat.v1.logging.info("\n>>Using augmentation {}".format(aug_ops))
       token_prob = float(aug_ops.split("-")[1])
       op = UnifRep(token_prob, vocab)
       for i in range(len(examples)):
         examples[i] = op(examples[i])
     elif aug_ops.startswith("tf_idf"):
-      tf.logging.info("\n>>Using augmentation {}".format(aug_ops))
+      tf.compat.v1.logging.info("\n>>Using augmentation {}".format(aug_ops))
       token_prob = float(aug_ops.split("-")[1])
       op = TfIdfWordRep(token_prob, data_stats)
       for i in range(len(examples)):

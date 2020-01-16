@@ -35,14 +35,14 @@ FLAGS = flags.FLAGS
 
 def _decode_record(record, name_to_features):
   """Decodes a record to a TensorFlow example."""
-  example = tf.parse_single_example(record, name_to_features)
+  example = tf.io.parse_single_example(serialized=record, features=name_to_features)
 
   # tf.Example only supports tf.int64, but the TPU only supports tf.int32.
   # So cast all int64 to int32.
   for name in list(example.keys()):
     t = example[name]
     if t.dtype == tf.int64:
-      t = tf.to_int32(t)
+      t = tf.cast(t, dtype=tf.int32)
     example[name] = t
 
   return example
@@ -51,13 +51,13 @@ def _decode_record(record, name_to_features):
 def get_sup_feature_specs():
   """Get supervised feature."""
   feature_specs = collections.OrderedDict()
-  feature_specs["input_ids"] = tf.FixedLenFeature(
+  feature_specs["input_ids"] = tf.io.FixedLenFeature(
       [FLAGS.max_seq_length], tf.int64)
-  feature_specs["input_mask"] = tf.FixedLenFeature(
+  feature_specs["input_mask"] = tf.io.FixedLenFeature(
       [FLAGS.max_seq_length], tf.int64)
-  feature_specs["input_type_ids"] = tf.FixedLenFeature(
+  feature_specs["input_type_ids"] = tf.io.FixedLenFeature(
       [FLAGS.max_seq_length], tf.int64)
-  feature_specs["label_ids"] = tf.FixedLenFeature(
+  feature_specs["label_ids"] = tf.io.FixedLenFeature(
       [1], tf.int64)
   return feature_specs
 
@@ -65,17 +65,17 @@ def get_sup_feature_specs():
 def get_unsup_feature_specs():
   """Get unsupervised feature."""
   feature_specs = collections.OrderedDict()
-  feature_specs["ori_input_ids"] = tf.FixedLenFeature(
+  feature_specs["ori_input_ids"] = tf.io.FixedLenFeature(
       [FLAGS.max_seq_length], tf.int64)
-  feature_specs["ori_input_mask"] = tf.FixedLenFeature(
+  feature_specs["ori_input_mask"] = tf.io.FixedLenFeature(
       [FLAGS.max_seq_length], tf.int64)
-  feature_specs["ori_input_type_ids"] = tf.FixedLenFeature(
+  feature_specs["ori_input_type_ids"] = tf.io.FixedLenFeature(
       [FLAGS.max_seq_length], tf.int64)
-  feature_specs["aug_input_ids"] = tf.FixedLenFeature(
+  feature_specs["aug_input_ids"] = tf.io.FixedLenFeature(
       [FLAGS.max_seq_length], tf.int64)
-  feature_specs["aug_input_mask"] = tf.FixedLenFeature(
+  feature_specs["aug_input_mask"] = tf.io.FixedLenFeature(
       [FLAGS.max_seq_length], tf.int64)
-  feature_specs["aug_input_type_ids"] = tf.FixedLenFeature(
+  feature_specs["aug_input_type_ids"] = tf.io.FixedLenFeature(
       [FLAGS.max_seq_length], tf.int64)
   return feature_specs
 
@@ -100,10 +100,10 @@ def get_aug_files(data_base_path, aug_ops, aug_copy):
           data_record_path)
       sub_policy_data_files += data_files
     if len(exist_copy_num) < aug_copy * 0.9:
-      tf.logging.info("not enough copies for aug op: {:s}".format(aug_ops))
-      tf.logging.info("found files: {:s}".format(
+      tf.compat.v1.logging.info("not enough copies for aug op: {:s}".format(aug_ops))
+      tf.compat.v1.logging.info("found files: {:s}".format(
           " ".join(sub_policy_data_files)))
-      tf.logging.info("found copy: {:d} / desired copy: {:d}".format(
+      tf.compat.v1.logging.info("found copy: {:d} / desired copy: {:d}".format(
           len(exist_copy_num), aug_copy))
     assert len(exist_copy_num) > aug_copy * 0.9
     total_data_files += sub_policy_data_files
@@ -116,7 +116,7 @@ def get_training_dataset(total_data_files, batch_size, num_threads, is_training,
   """build dataset from files."""
   d = tf.data.Dataset.from_tensor_slices(tf.constant(total_data_files))
   d = d.apply(
-      tf.contrib.data.shuffle_and_repeat(
+      tf.data.experimental.shuffle_and_repeat(
           buffer_size=len(total_data_files)))
 
   # `cycle_length` is the number of parallel files that get read.
@@ -125,13 +125,13 @@ def get_training_dataset(total_data_files, batch_size, num_threads, is_training,
   # `sloppy` mode means that the interleaving is not exact. This adds
   # even more randomness to the training pipeline.
   d = d.apply(
-      tf.contrib.data.parallel_interleave(
+      tf.data.experimental.parallel_interleave(
           tf.data.TFRecordDataset,
           sloppy=is_training,
           cycle_length=cycle_length))
   d = d.shuffle(buffer_size=shuffle_buffer_size)
   d = d.apply(
-      tf.contrib.data.map_and_batch(
+      tf.data.experimental.map_and_batch(
           lambda record: _decode_record(record, feature_specs),
           batch_size=batch_size,
           num_parallel_batches=num_threads,
@@ -143,7 +143,7 @@ def get_evaluation_dataset(total_data_files, batch_size, feature_specs):
   """build non-repeat dataset from files."""
   d = tf.data.TFRecordDataset(total_data_files)
   d = d.apply(
-      tf.contrib.data.map_and_batch(
+      tf.data.experimental.map_and_batch(
           lambda record: _decode_record(record, feature_specs),
           batch_size=batch_size,
           num_parallel_batches=None,
@@ -156,7 +156,7 @@ def evaluation_input_fn_builder(data_base_path, task, prefetch_size=1000):
 
   total_data_files = tf.contrib.slim.parallel_reader.get_data_files(
       os.path.join(data_base_path, "tf_examples.tfrecord*"))
-  tf.logging.info("loading eval {} data from these files: {:s}".format(
+  tf.compat.v1.logging.info("loading eval {} data from these files: {:s}".format(
       task, " ".join(total_data_files)))
 
   def input_fn(params):
@@ -206,7 +206,7 @@ def training_input_fn_builder(
     """The `input_fn` for TPUEstimator which generates the feature dataset."""
     sup_batch_size = params["batch_size"]
     total_batch_size = 0
-    tf.logging.info("sup batch size: %d", (sup_batch_size))
+    tf.compat.v1.logging.info("sup batch size: %d", (sup_batch_size))
 
     dataset_list = []
 
@@ -221,7 +221,7 @@ def training_input_fn_builder(
           shuffle_buffer_size,
           get_sup_feature_specs())
       total_batch_size += sup_batch_size
-      tf.logging.info("sup batch size: %d", (sup_batch_size))
+      tf.compat.v1.logging.info("sup batch size: %d", (sup_batch_size))
       dataset_list.append(sup_dst)
 
       ## only consider unsupervised data when supervised data is considered
@@ -235,9 +235,9 @@ def training_input_fn_builder(
             get_unsup_feature_specs())
         total_batch_size += sup_batch_size * unsup_ratio * 2
         dataset_list.append(unsup_dst)
-        tf.logging.info("unsup batch size: %d", (sup_batch_size * unsup_ratio))
+        tf.compat.v1.logging.info("unsup batch size: %d", (sup_batch_size * unsup_ratio))
 
-    tf.logging.info("total sample in a batch: %d", (total_batch_size))
+    tf.compat.v1.logging.info("total sample in a batch: %d", (total_batch_size))
 
     def flatten_input(*features):
       """Merging multiple feature dicts resulted from zipped datasets."""

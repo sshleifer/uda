@@ -53,7 +53,7 @@ flags.DEFINE_string(
 
 def dump_raw_examples(examples, separate_doc_by_newline):
   """dump raw examples."""
-  tf.logging.info("dumpping raw examples")
+  tf.compat.v1.logging.info("dumpping raw examples")
   text_path = os.path.join(FLAGS.output_data_dir, "text.txt")
   label_path = os.path.join(FLAGS.output_data_dir, "label.txt")
   with tf.io.gfile.Open(text_path, "w") as text_ouf:
@@ -68,12 +68,12 @@ def dump_raw_examples(examples, separate_doc_by_newline):
         if separate_doc_by_newline:
           text_ouf.write("\n")
         label_ouf.write(label + "\n")
-  tf.logging.info("finished dumpping raw examples")
+  tf.compat.v1.logging.info("finished dumpping raw examples")
 
 
 def main(argv):
   processor = raw_data_utils.get_processor(FLAGS.task_name)
-  tf.logging.info("loading examples")
+  tf.compat.v1.logging.info("loading examples")
   FLAGS.output_data_dir = os.path.join(
       FLAGS.output_data_dir, FLAGS.sub_set)
   if not tf.io.gfile.Exists(FLAGS.output_data_dir):
@@ -84,8 +84,8 @@ def main(argv):
     examples = processor.get_unsup_examples(FLAGS.raw_data_dir, FLAGS.sub_set)
   else:
     assert False
-  tf.logging.info("finished loading examples")
-  tf.logging.info("examples num: {:d}".format(len(examples)))
+  tf.compat.v1.logging.info("finished loading examples")
+  tf.compat.v1.logging.info("examples num: {:d}".format(len(examples)))
   dump_raw_examples(examples, FLAGS.separate_doc_by_newline)
 
 if __name__ == '__main__':

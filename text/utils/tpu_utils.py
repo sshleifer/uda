@@ -29,9 +29,9 @@ def construct_scalar_host_call(
 
   def host_call_fn(global_step, *args):
     step = global_step[0]
-    with tf.contrib.summary.create_file_writer(
+    with tf.compat.v2.summary.create_file_writer(
         logdir=model_dir, filename_suffix=".host_call").as_default():
-      with tf.contrib.summary.always_record_summaries():
+      with tf.compat.v2.summary.record_if(True):
         for i, name in enumerate(metric_names):
           if reduce_fn is None:
             scalar = args[i][0]
@@ -39,11 +39,11 @@ def construct_scalar_host_call(
             scalar = reduce_fn(args[i])
           with tf.contrib.summary.record_summaries_every_n_global_steps(
               1, step):
-            tf.contrib.summary.scalar(prefix + name, scalar, step=step)
+            tf.compat.v2.summary.scalar(name=prefix + name, data=scalar, step=step)
 
-        return tf.contrib.summary.all_summary_ops()
+        return tf.compat.v1.summary.all_v2_summary_ops()
 
-  global_step_tensor = tf.reshape(tf.train.get_or_create_global_step(), [1])
+  global_step_tensor = tf.reshape(tf.compat.v1.train.get_or_create_global_step(), [1])
   other_tensors = [tf.reshape(metric_dict[key], [-1]) for key in metric_names]
 
   return host_call_fn, [global_step_tensor] + other_tensors

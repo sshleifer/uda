@@ -41,7 +41,7 @@ def replace_with_length_check(
   """Use new_text if the text length satisfies several constraints."""
   if len(ori_text) < use_min_length or len(new_text) < use_min_length:
     if random.random() < 0.001:
-      tf.logging.info(
+      tf.compat.v1.logging.info(
           "not replacing due to short text: \n\tori: {:s}\n\tnew: {:s}\n".format(
               word_level_augment.filter_unicode(ori_text),
               word_level_augment.filter_unicode(new_text)))
@@ -49,7 +49,7 @@ def replace_with_length_check(
   length_diff_ratio = 1.0 * (len(new_text) - len(ori_text)) / len(ori_text)
   if math.fabs(length_diff_ratio) > use_max_length_diff_ratio:
     if random.random() < 0.001:
-      tf.logging.info(
+      tf.compat.v1.logging.info(
           ("not replacing due to too different text length:\n"
            "\tori: {:s}\n\tnew: {:s}\n".format(
                word_level_augment.filter_unicode(ori_text),
@@ -63,7 +63,7 @@ def back_translation(examples, aug_ops, sub_set, aug_copy_num,
   """Run back translation."""
   use_min_length = 10
   use_max_length_diff_ratio = 0.5
-  tf.logging.info("running bt augmentation")
+  tf.compat.v1.logging.info("running bt augmentation")
   bt_args = aug_ops.split("-")
   temp = float(bt_args[1])
 
@@ -79,7 +79,7 @@ def back_translation(examples, aug_ops, sub_set, aug_copy_num,
   back_translation_file = "{:s}/{:s}/sample_{:.1f}/para/para_{:d}.txt".format(
       FLAGS.back_translation_dir, sub_set,
       temp, aug_copy_num)
-  tf.logging.info("Using back translation file: {:s}".format(
+  tf.compat.v1.logging.info("Using back translation file: {:s}".format(
       back_translation_file))
 
   with tf.io.gfile.Open(back_translation_file) as inf:
@@ -118,15 +118,15 @@ def back_translation(examples, aug_ops, sub_set, aug_copy_num,
         label=ori_example.label)
     aug_examples += [example]
     if np.random.random() < 0.0001:
-      tf.logging.info("\tori:\n\t\t{:s}\n\t\t{:s}\n\t\t{:s}\n".format(
+      tf.compat.v1.logging.info("\tori:\n\t\t{:s}\n\t\t{:s}\n\t\t{:s}\n".format(
           ori_example.text_a, ori_example.text_b, ori_example.label))
-      tf.logging.info("\tnew:\n\t\t{:s}\n\t\t{:s}\n\t\t{:s}\n".format(
+      tf.compat.v1.logging.info("\tnew:\n\t\t{:s}\n\t\t{:s}\n\t\t{:s}\n".format(
           example.text_a, example.text_b, example.label))
     if i % 10000 == 0:
       print("processing example # {:d}".format(i))
-  tf.logging.info("applied back translation for {:.1f} percent of data".format(
+  tf.compat.v1.logging.info("applied back translation for {:.1f} percent of data".format(
       aug_cnt * 1. / len(examples) * 100))
-  tf.logging.info("finishing running back translation augmentation")
+  tf.compat.v1.logging.info("finishing running back translation augmentation")
   return aug_examples
 
 

@@ -32,8 +32,8 @@ FLAGS = flags.FLAGS
 
 def kl_for_log_probs(log_p, log_q):
   p = tf.exp(log_p)
-  neg_ent = tf.reduce_sum(p * log_p, axis=-1)
-  neg_cross_ent = tf.reduce_sum(p * log_q, axis=-1)
+  neg_ent = tf.reduce_sum(input_tensor=p * log_p, axis=-1)
+  neg_cross_ent = tf.reduce_sum(input_tensor=p * log_q, axis=-1)
   kl = neg_ent - neg_cross_ent
   return kl
 
@@ -41,17 +41,17 @@ def kl_for_log_probs(log_p, log_q):
 def hidden_to_logits(hidden, is_training, num_classes, scope):
   hidden_size = hidden.shape[-1].value
 
-  with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
-    output_weights = tf.get_variable(
+  with tf.compat.v1.variable_scope(scope, reuse=tf.compat.v1.AUTO_REUSE):
+    output_weights = tf.compat.v1.get_variable(
         "output_weights", [num_classes, hidden_size],
-        initializer=tf.truncated_normal_initializer(stddev=0.02))
+        initializer=tf.compat.v1.truncated_normal_initializer(stddev=0.02))
 
-    output_bias = tf.get_variable(
-        "output_bias", [num_classes], initializer=tf.zeros_initializer())
+    output_bias = tf.compat.v1.get_variable(
+        "output_bias", [num_classes], initializer=tf.compat.v1.zeros_initializer())
 
     if is_training:
       # I.e., 0.1 dropout
-      hidden = tf.nn.dropout(hidden, keep_prob=0.9)
+      hidden = tf.nn.dropout(hidden, rate=1 - (0.9))
 
     if hidden.shape.ndims == 3:
       logits = tf.einsum("bid,nd->bin", hidden, output_weights)
@@ -63,7 +63,7 @@ def hidden_to_logits(hidden, is_training, num_classes, scope):
 
 
 def get_tsa_threshold(schedule, global_step, num_train_steps, start, end):
-  training_progress = tf.to_float(global_step) / tf.to_float(num_train_steps)
+  training_progress = tf.cast(global_step, dtype=tf.float32) / tf.cast(num_train_steps, dtype=tf.float32)
   if schedule == "linear_schedule":
     threshold = training_progress
   elif schedule == "exp_schedule":
@@ -118,15 +118,15 @@ def create_model(
   log_probs = tf.nn.log_softmax(clas_logits, axis=-1)
   correct_label_probs = None
 
-  with tf.variable_scope("sup_loss"):
+  with tf.compat.v1.variable_scope("sup_loss"):
     sup_log_probs = log_probs[:sup_batch_size]
     one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
     tgt_label_prob = one_hot_labels
 
-    per_example_loss = -tf.reduce_sum(tgt_label_prob * sup_log_probs, axis=-1)
+    per_example_loss = -tf.reduce_sum(input_tensor=tgt_label_prob * sup_log_probs, axis=-1)
     loss_mask = tf.ones_like(per_example_loss, dtype=per_example_loss.dtype)
     correct_label_probs = tf.reduce_sum(
-        one_hot_labels * tf.exp(sup_log_probs), axis=-1)
+        input_tensor=one_hot_labels * tf.exp(sup_log_probs), axis=-1)
 
     if tsa:
       tsa_start = 1. / num_labels
@@ -142,12 +142,12 @@ def create_model(
 
     loss_mask = tf.stop_gradient(loss_mask)
     per_example_loss = per_example_loss * loss_mask
-    sup_loss = (tf.reduce_sum(per_example_loss) /
-                tf.maximum(tf.reduce_sum(loss_mask), 1))
+    sup_loss = (tf.reduce_sum(input_tensor=per_example_loss) /
+                tf.maximum(tf.reduce_sum(input_tensor=loss_mask), 1))
 
   unsup_loss_mask = None
   if is_training and unsup_ratio > 0:
-    with tf.variable_scope("unsup_loss"):
+    with tf.compat.v1.variable_scope("unsup_loss"):
       ori_start = sup_batch_size
       ori_end = ori_start + unsup_batch_size
       aug_start = sup_batch_size + unsup_batch_size
@@ -165,14 +165,14 @@ def create_model(
         tgt_ori_log_probs = tf.stop_gradient(ori_log_probs)
 
       if FLAGS.uda_confidence_thresh != -1:
-        largest_prob = tf.reduce_max(tf.exp(ori_log_probs), axis=-1)
+        largest_prob = tf.reduce_max(input_tensor=tf.exp(ori_log_probs), axis=-1)
         unsup_loss_mask = tf.cast(tf.greater(
             largest_prob, FLAGS.uda_confidence_thresh), tf.float32)
         unsup_loss_mask = tf.stop_gradient(unsup_loss_mask)
 
       per_example_kl_loss = kl_for_log_probs(
           tgt_ori_log_probs, aug_log_probs) * unsup_loss_mask
-      unsup_loss = tf.reduce_mean(per_example_kl_loss)
+      unsup_loss = tf.reduce_mean(input_tensor=per_example_kl_loss)
 
   else:
     unsup_loss = 0.
@@ -229,14 +229,14 @@ def model_fn_builder(
   def model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
     """The `model_fn` for TPUEstimator."""
     if print_feature:
-      tf.logging.info("*** Features ***")
+      tf.compat.v1.logging.info("*** Features ***")
       for name in sorted(features.keys()):
-        tf.logging.info(
+        tf.compat.v1.logging.info(
             "  name = %s, shape = %s" % (name, features[name].shape))
 
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
-    global_step = tf.train.get_or_create_global_step()
+    global_step = tf.compat.v1.train.get_or_create_global_step()
     ##### Classification objective
     label_ids = features["label_ids"]
     label_ids = tf.reshape(label_ids, [-1])
@@ -281,16 +281,16 @@ def model_fn_builder(
     metric_dict = {}
 
     # number of correct predictions
-    predictions = tf.argmax(logits, axis=-1, output_type=label_ids.dtype)
-    is_correct = tf.to_float(tf.equal(predictions, label_ids))
-    acc = tf.reduce_mean(is_correct)
+    predictions = tf.argmax(input=logits, axis=-1, output_type=label_ids.dtype)
+    is_correct = tf.cast(tf.equal(predictions, label_ids), dtype=tf.float32)
+    acc = tf.reduce_mean(input_tensor=is_correct)
     # add sup. metrics to dict
     metric_dict["sup/loss"] = sup_loss
     metric_dict["sup/accu"] = acc
     metric_dict["sup/correct_cat_probs"] = correct_label_probs
     metric_dict["sup/tsa_threshold"] = tsa_threshold
 
-    metric_dict["sup/sup_trained_ratio"] = tf.reduce_mean(loss_mask)
+    metric_dict["sup/sup_trained_ratio"] = tf.reduce_mean(input_tensor=loss_mask)
     total_loss = sup_loss
 
     if unsup_ratio > 0 and uda_coeff > 0 and "input_ids" in features:
@@ -298,10 +298,10 @@ def model_fn_builder(
       metric_dict["unsup/loss"] = unsup_loss
 
     if unsup_loss_mask is not None:
-      metric_dict["unsup/high_prob_ratio"] = tf.reduce_mean(unsup_loss_mask)
+      metric_dict["unsup/high_prob_ratio"] = tf.reduce_mean(input_tensor=unsup_loss_mask)
 
     ##### Initialize variables with pre-trained models
-    tvars = tf.trainable_variables()
+    tvars = tf.compat.v1.trainable_variables()
 
     scaffold_fn = None
     if init_checkpoint:
@@ -310,22 +310,22 @@ def model_fn_builder(
            tvars, init_checkpoint)
       if use_tpu:
         def tpu_scaffold():
-          tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
-          return tf.train.Scaffold()
+          tf.compat.v1.train.init_from_checkpoint(init_checkpoint, assignment_map)
+          return tf.compat.v1.train.Scaffold()
 
         scaffold_fn = tpu_scaffold
       else:
-        tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+        tf.compat.v1.train.init_from_checkpoint(init_checkpoint, assignment_map)
     else:
       initialized_variable_names = {}
 
     if print_structure:
-      tf.logging.info("**** Trainable Variables ****")
+      tf.compat.v1.logging.info("**** Trainable Variables ****")
       for var in tvars:
         init_string = ""
         if var.name in initialized_variable_names:
           init_string = ", *INIT_FROM_CKPT*"
-        tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
+        tf.compat.v1.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
                         init_string)
 
     ##### Construct TPU Estimator Spec based on the specific mode
@@ -344,7 +344,7 @@ def model_fn_builder(
           prefix="training/",
           reduce_fn=tf.reduce_mean)
 
-      output_spec = tf.contrib.tpu.TPUEstimatorSpec(
+      output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
           mode=mode,
           loss=total_loss,
           train_op=train_op,
@@ -355,10 +355,10 @@ def model_fn_builder(
 
       def clas_metric_fn(per_example_loss, label_ids, logits):
         ## classification loss & accuracy
-        loss = tf.metrics.mean(per_example_loss)
+        loss = tf.compat.v1.metrics.mean(per_example_loss)
 
-        predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
-        accuracy = tf.metrics.accuracy(label_ids, predictions)
+        predictions = tf.argmax(input=logits, axis=-1, output_type=tf.int32)
+        accuracy = tf.compat.v1.metrics.accuracy(label_ids, predictions)
 
         ret_dict = {
             "eval_classify_loss": loss,
@@ -369,7 +369,7 @@ def model_fn_builder(
 
       eval_metrics = (clas_metric_fn, [per_example_loss, label_ids, logits])
 
-      output_spec = tf.contrib.tpu.TPUEstimatorSpec(
+      output_spec = tf.compat.v1.estimator.tpu.TPUEstimatorSpec(
           mode=mode,
           loss=total_loss,
           eval_metrics=eval_metrics,
